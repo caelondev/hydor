@@ -24,12 +24,10 @@ func NewVM() *VM {
 	return &VM{}
 }
 
-func (vm *VM) Interpret(chunk *Chunk) InterpretResult {
-	vm.Chunk = chunk
-	vm.Ip = 0
-
-	vm.resetStack()
-	return vm.run()
+func (vm *VM) Interpret(source string) InterpretResult {
+	parser := NewParser()
+	parser.Compile(source)
+	return INTERPRET_OK
 }
 
 func (vm *VM) resetStack() {
