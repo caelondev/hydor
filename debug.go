@@ -24,6 +24,13 @@ func (c *Chunk) DisassembleInstruction(offset int) int {
 
 	switch instruction {
 	case OP_CONSTANT: return constantInstruction("OP_CONSTANT", offset, c)
+	case OP_NEGATE: return simpleInstruction("OP_NEGATE", offset)
+
+	case OP_ADD: return simpleInstruction("OP_ADD", offset)
+	case OP_SUBTRACT: return simpleInstruction("OP_SUBTRACT", offset)
+	case OP_MULTIPLY: return simpleInstruction("OP_MULTIPLY", offset)
+	case OP_DIVIDE: return simpleInstruction("OP_DIVIDE", offset)
+
 	case OP_RETURN: return simpleInstruction("OP_RETURN", offset)
 
 	default:
@@ -36,6 +43,8 @@ func constantInstruction(name string, offset int, chunk *Chunk) int {
 	constant := chunk.Code[offset+1] // Takes the value after the constant instruction
 	fmt.Printf("%-12s %4d", name, constant)
 	printValue(chunk.Constants.Values[constant])
+
+	fmt.Println()
 
 	return move(offset, 2) // Advance past both constant and value
 }

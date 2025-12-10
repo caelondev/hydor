@@ -19,5 +19,5 @@ func (va *ValueArray) Write(value Value) {
 }
 
 func printValue(value Value) {
-	fmt.Printf("%g\n", value)
+	fmt.Printf("%g", value)
 }
