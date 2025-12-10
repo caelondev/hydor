@@ -25,9 +25,19 @@ func NewVM() *VM {
 }
 
 func (vm *VM) Interpret(source string) InterpretResult {
+	chunk := NewChunk(source)
 	parser := NewParser()
-	parser.Compile(source)
-	return INTERPRET_OK
+	
+	if !parser.Compile(source, chunk) {
+		return INTERPRET_COMPILE_ERROR
+	}
+
+	vm.Chunk = chunk
+	vm.Ip = 0
+	vm.resetStack()
+
+	result := vm.run()
+	return result
 }
 
 func (vm *VM) resetStack() {
@@ -84,6 +94,7 @@ func (vm *VM) run() InterpretResult {
 			vm.push(-vm.pop())
 
 		case OP_RETURN:
+			vm.pop()
 			printValue(vm.pop())
 			fmt.Println()
 			return INTERPRET_OK

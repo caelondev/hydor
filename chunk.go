@@ -18,10 +18,10 @@ type Chunk struct {
 	Constants ValueArray
 }
 
-func NewChunk() *Chunk {
+func NewChunk(source string) *Chunk {
 	return &Chunk{
-		Code: make([]byte, 0),
-		Lines: make([]int, 0),
+		Code: make([]byte, 0, len(source) + 16),
+		Lines: make([]int, 0, (len(source)/4)),
 		Constants: *NewValueArray(),
 	}
 }
