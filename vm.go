@@ -94,7 +94,6 @@ func (vm *VM) run() InterpretResult {
 			vm.push(-vm.pop())
 
 		case OP_RETURN:
-			vm.pop()
 			printValue(vm.pop())
 			fmt.Println()
 			return INTERPRET_OK

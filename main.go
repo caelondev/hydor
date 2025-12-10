@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"time"
 )
 
 func main() {
@@ -38,11 +37,7 @@ func runRepl() {
 			break
 		}
 
-		start := time.Now()
 		vm.Interpret(line)
-		duration := time.Since(start)
-
-		fmt.Printf("Program took %s of time to execute \n", duration)
 	}
 }
 

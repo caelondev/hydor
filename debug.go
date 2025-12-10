@@ -60,15 +60,12 @@ func move(offset int, n int) int {
 
 func (c *Chunk) GetLine(offset int) int {
 	instructionsSoFar := 0
-	for i := 0; i < len(c.Lines); i += 2 {
-		line := c.Lines[i]
-		count := c.Lines[i+1]
 
-		if offset < instructionsSoFar + count {
-			return line
+	for _, run := range c.Lines {
+		if offset < instructionsSoFar+run.Count {
+			return run.Line
 		}
-
-		instructionsSoFar += count
+		instructionsSoFar += run.Count
 	}
 
 	return -1
