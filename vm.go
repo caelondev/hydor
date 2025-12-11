@@ -84,21 +84,40 @@ func (vm *VM) run() InterpretResult {
 		// TODO : Should I rewrite this? or at least make a helper ---
 		// function? this kinda looks ugly ---
 		case OP_ADD:
-			b := vm.pop()
-			a := vm.pop()
-			vm.push(NumberVal(a.AsNumber() + b.AsNumber()))
+			if vm.peek(0).IsString() && vm.peek(1).IsString() {
+				vm.concatenate()
+			} else if vm.peek(0).IsNumber() && vm.peek(1).IsNumber() {
+				b := vm.pop()
+				a := vm.pop()
+				vm.push(NumberVal(a.AsNumber() + b.AsNumber()))
+			} else {
+				b := vm.pop()
+				a := vm.pop()
+				vm.runtimeError("Could not add nor concatenate operands (%s and %s)", valueTypeName(a), valueTypeName(b))
+				return INTERPRET_RUNTIME_ERROR
+			}
+
 		case OP_SUBTRACT:
-			b := vm.pop()
-			a := vm.pop()
-			vm.push(NumberVal(a.AsNumber() - b.AsNumber()))
+			if !vm.peek(0).IsNumber() || !vm.peek(1).IsNumber() {
+				b := vm.pop()
+				a := vm.pop()
+				vm.runtimeError("Cannot subtract %s type to a %s type", valueTypeName(a), valueTypeName(b))
+				return INTERPRET_RUNTIME_ERROR
+			}
 		case OP_MULTIPLY:
-			b := vm.pop()
-			a := vm.pop()
-			vm.push(NumberVal(a.AsNumber() * b.AsNumber()))
+			if !vm.peek(0).IsNumber() || !vm.peek(1).IsNumber() {
+				b := vm.pop()
+				a := vm.pop()
+				vm.runtimeError("Cannot multiply %s type to a %s type", valueTypeName(a), valueTypeName(b))
+				return INTERPRET_RUNTIME_ERROR
+			}
 		case OP_DIVIDE:
-			b := vm.pop()
-			a := vm.pop()
-			vm.push(NumberVal(a.AsNumber() / b.AsNumber()))
+			if !vm.peek(0).IsNumber() || !vm.peek(1).IsNumber() {
+				b := vm.pop()
+				a := vm.pop()
+				vm.runtimeError("Cannot divide %s type to a %s type", valueTypeName(a), valueTypeName(b))
+				return INTERPRET_RUNTIME_ERROR
+			}
 
 		case OP_EQUAL:
 			b := vm.pop()
@@ -107,16 +126,24 @@ func (vm *VM) run() InterpretResult {
 		case OP_GREATER: 
 			b := vm.pop()
 			a := vm.pop()
-			vm.push(BoolVal(a.AsNumber() > b.AsNumber()))
+			if !a.IsNumber() || !b.IsNumber() {
+				vm.runtimeError("Could not perform relational operation on given value type (%s and %s)", valueTypeName(a), valueTypeName(b))
+
+				return INTERPRET_RUNTIME_ERROR
+			}
+
 		case OP_LESS: 
 			b := vm.pop()
 			a := vm.pop()
-			vm.push(BoolVal(a.AsNumber() < b.AsNumber()))
+			if !a.IsNumber() || !b.IsNumber() {
+				vm.runtimeError("Could not perform relational operation on given value type (%s and %s)", valueTypeName(a), valueTypeName(b))
+				return INTERPRET_RUNTIME_ERROR
+			}
 
 		case OP_NEGATE:
 			value := vm.pop()
 			if !value.IsNumber() {
-				vm.runtimeError("Cannot use Logical NOT on a %s as it must be a boolean", valueTypeName(value.Type))
+				vm.runtimeError("Cannot use Logical NOT on a %s as it must be a boolean", valueTypeName(value))
 				return INTERPRET_RUNTIME_ERROR
 			}
 
@@ -153,4 +180,12 @@ func (vm *VM) runtimeError(format string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, "[line %d] in script\n", line)
 	
 	vm.resetStack()
+}
+
+func (vm *VM) concatenate() {
+	b := vm.pop().AsString()
+	a := vm.pop().AsString()
+
+	str := NewString(a.Chars + b.Chars)
+	vm.push(ObjVal(str.AsObj()))
 }

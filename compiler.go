@@ -27,7 +27,7 @@ const (
 	PREC_COMPARISON
 	PREC_TERM
 	PREC_FACTOR
-	PREC_UNARY
+	PREC_parseUnary
 	PREC_CALL
 	PREC_PRIMARY
 )
@@ -36,42 +36,42 @@ var parseRules map[tokens.TokenType]ParseRule
 
 func init() {
 	parseRules = map[tokens.TokenType]ParseRule{
-		tokens.TOKEN_LEFT_PAREN:    {grouping, nil, PREC_NONE},
+		tokens.TOKEN_LEFT_PAREN:    {parseGrouping, nil, PREC_NONE},
 		tokens.TOKEN_RIGHT_PAREN:   {nil, nil, PREC_NONE},
 		tokens.TOKEN_LEFT_BRACE:    {nil, nil, PREC_NONE},
 		tokens.TOKEN_RIGHT_BRACE:   {nil, nil, PREC_NONE},
 		tokens.TOKEN_COMMA:         {nil, nil, PREC_NONE},
 		tokens.TOKEN_DOT:           {nil, nil, PREC_NONE},
-		tokens.TOKEN_MINUS:         {unary, binary, PREC_TERM},
-		tokens.TOKEN_PLUS:          {nil, binary, PREC_TERM},
+		tokens.TOKEN_MINUS:         {parseUnary, parseBinary, PREC_TERM},
+		tokens.TOKEN_PLUS:          {nil, parseBinary, PREC_TERM},
 		tokens.TOKEN_SEMICOLON:     {nil, nil, PREC_NONE},
-		tokens.TOKEN_SLASH:         {nil, binary, PREC_FACTOR},
-		tokens.TOKEN_STAR:          {nil, binary, PREC_FACTOR},
-		tokens.TOKEN_BANG:          {unary, nil, PREC_NONE},
-		tokens.TOKEN_BANG_EQUAL:    {nil, binary, PREC_EQUALITY},
+		tokens.TOKEN_SLASH:         {nil, parseBinary, PREC_FACTOR},
+		tokens.TOKEN_STAR:          {nil, parseBinary, PREC_FACTOR},
+		tokens.TOKEN_BANG:          {parseUnary, nil, PREC_NONE},
+		tokens.TOKEN_BANG_EQUAL:    {nil, parseBinary, PREC_EQUALITY},
 		tokens.TOKEN_EQUAL:         {nil, nil, PREC_NONE},
-		tokens.TOKEN_EQUAL_EQUAL:   {nil, binary, PREC_EQUALITY},
-		tokens.TOKEN_GREATER:       {nil, binary, PREC_COMPARISON},
-		tokens.TOKEN_GREATER_EQUAL: {nil, binary, PREC_COMPARISON},
-		tokens.TOKEN_LESS:          {nil, binary, PREC_COMPARISON},
-		tokens.TOKEN_LESS_EQUAL:    {nil, binary, PREC_COMPARISON},
+		tokens.TOKEN_EQUAL_EQUAL:   {nil, parseBinary, PREC_EQUALITY},
+		tokens.TOKEN_GREATER:       {nil, parseBinary, PREC_COMPARISON},
+		tokens.TOKEN_GREATER_EQUAL: {nil, parseBinary, PREC_COMPARISON},
+		tokens.TOKEN_LESS:          {nil, parseBinary, PREC_COMPARISON},
+		tokens.TOKEN_LESS_EQUAL:    {nil, parseBinary, PREC_COMPARISON},
 		tokens.TOKEN_IDENTIFIER:    {nil, nil, PREC_NONE},
-		tokens.TOKEN_STRING:        {nil, nil, PREC_NONE},
-		tokens.TOKEN_NUMBER:        {number, nil, PREC_NONE},
+		tokens.TOKEN_STRING:        {parseString, nil, PREC_NONE},
+		tokens.TOKEN_NUMBER:        {parseNumber, nil, PREC_NONE},
 		tokens.TOKEN_AND:           {nil, nil, PREC_NONE},
 		tokens.TOKEN_CLASS:         {nil, nil, PREC_NONE},
 		tokens.TOKEN_ELSE:          {nil, nil, PREC_NONE},
-		tokens.TOKEN_FALSE:         {literal, nil, PREC_NONE},
+		tokens.TOKEN_FALSE:         {parseLiteral, nil, PREC_NONE},
 		tokens.TOKEN_FOR:           {nil, nil, PREC_NONE},
 		tokens.TOKEN_FUNCTION:      {nil, nil, PREC_NONE},
 		tokens.TOKEN_IF:            {nil, nil, PREC_NONE},
-		tokens.TOKEN_NIL:           {literal, nil, PREC_NONE},
+		tokens.TOKEN_NIL:           {parseLiteral, nil, PREC_NONE},
 		tokens.TOKEN_OR:            {nil, nil, PREC_NONE},
 		tokens.TOKEN_PRINT:         {nil, nil, PREC_NONE},
 		tokens.TOKEN_RETURN:        {nil, nil, PREC_NONE},
 		tokens.TOKEN_SUPER:         {nil, nil, PREC_NONE},
 		tokens.TOKEN_THIS:          {nil, nil, PREC_NONE},
-		tokens.TOKEN_TRUE:          {literal, nil, PREC_NONE},
+		tokens.TOKEN_TRUE:          {parseLiteral, nil, PREC_NONE},
 		tokens.TOKEN_VAR:           {nil, nil, PREC_NONE},
 		tokens.TOKEN_WHILE:         {nil, nil, PREC_NONE},
 		tokens.TOKEN_ERROR:         {nil, nil, PREC_NONE},
@@ -198,14 +198,19 @@ func (p *Parser) endCompiler() {
 
 // ---- Parse functions ----
 
-func number(p *Parser) {
+func parseString(p *Parser) {
+	str := NewString(p.previous.Lexeme)
+	p.emitConstant(ObjVal(str.AsObj()))
+}
+
+func parseNumber(p *Parser) {
 	val, _ := strconv.ParseFloat(p.previous.Lexeme, 64)
 	p.emitConstant(NumberVal(val))
 }
 
-func unary(p *Parser) {
+func parseUnary(p *Parser) {
 	op := p.previous.Type
-	p.parsePrecedence(PREC_UNARY)
+	p.parsePrecedence(PREC_parseUnary)
 
 	switch op {
 	case tokens.TOKEN_MINUS: p.emitByte(byte(OP_NEGATE))
@@ -213,7 +218,7 @@ func unary(p *Parser) {
 	}
 }
 
-func binary(p *Parser) {
+func parseBinary(p *Parser) {
 	op := p.previous.Type
 	rule := parseRules[op]
 	p.parsePrecedence(rule.precedence +1)
@@ -239,7 +244,7 @@ func binary(p *Parser) {
 	}
 }
 
-func literal(p *Parser) {
+func parseLiteral(p *Parser) {
 	switch p.previous.Type {
 	case tokens.TOKEN_FALSE:
 		p.emitByte(byte(OP_FALSE))
@@ -250,7 +255,7 @@ func literal(p *Parser) {
 	}
 }
 
-func grouping(p *Parser) {
+func parseGrouping(p *Parser) {
 	p.expression()
-	p.consume(tokens.TOKEN_RIGHT_PAREN, "Expected ')' after grouping")
+	p.consume(tokens.TOKEN_RIGHT_PAREN, "Expected ')' after parseGrouping")
 }
