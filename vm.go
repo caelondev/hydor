@@ -1,8 +1,11 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
-const DEBUG_TRACE_EXECUTION = false
+const DEBUG_TRACE_EXECUTION = true
 const STACK_MAX = 8 * 1024 * 1024
 
 type InterpretResult int
@@ -73,31 +76,56 @@ func (vm *VM) run() InterpretResult {
 			constant := readConstant()
 			vm.push(constant)
 
+		case OP_NIL: vm.push(NilVal())
+		case OP_TRUE: vm.push(BoolVal(true))
+		case OP_FALSE: vm.push(BoolVal(false))
+		case OP_NOT: vm.push(BoolVal(vm.pop().IsFalsy()))
+
+		// TODO : Should I rewrite this? or at least make a helper ---
+		// function? this kinda looks ugly ---
 		case OP_ADD:
 			b := vm.pop()
 			a := vm.pop()
-			vm.push(a+b)
+			vm.push(NumberVal(a.AsNumber() + b.AsNumber()))
 		case OP_SUBTRACT:
 			b := vm.pop()
 			a := vm.pop()
-			vm.push(a-b)
+			vm.push(NumberVal(a.AsNumber() - b.AsNumber()))
 		case OP_MULTIPLY:
 			b := vm.pop()
 			a := vm.pop()
-			vm.push(a*b)
+			vm.push(NumberVal(a.AsNumber() * b.AsNumber()))
 		case OP_DIVIDE:
 			b := vm.pop()
 			a := vm.pop()
-			vm.push(a/b)
+			vm.push(NumberVal(a.AsNumber() / b.AsNumber()))
+
+		case OP_EQUAL:
+			b := vm.pop()
+			a := vm.pop()
+			vm.push(BoolVal(valuesEqual(a, b)))
+		case OP_GREATER: 
+			b := vm.pop()
+			a := vm.pop()
+			vm.push(BoolVal(a.AsNumber() > b.AsNumber()))
+		case OP_LESS: 
+			b := vm.pop()
+			a := vm.pop()
+			vm.push(BoolVal(a.AsNumber() < b.AsNumber()))
 
 		case OP_NEGATE:
-			vm.push(-vm.pop())
+			value := vm.pop()
+			if !value.IsNumber() {
+				vm.runtimeError("Cannot use Logical NOT on a %s as it must be a boolean", valueTypeName(value.Type))
+				return INTERPRET_RUNTIME_ERROR
+			}
+
+			vm.push(BoolVal(!value.AsBool()))
 
 		case OP_RETURN:
 			printValue(vm.pop())
 			fmt.Println()
 			return INTERPRET_OK
-
 		}
 	}
 }
@@ -110,4 +138,19 @@ func (vm *VM) push(value Value) {
 func (vm *VM) pop() Value {
 	vm.StackTop--
 	return vm.Stack[vm.StackTop]
+}
+
+func (vm *VM) peek(distance int) Value {
+	return vm.Stack[vm.StackTop - 1 - distance]
+}
+
+func (vm *VM) runtimeError(format string, args ...interface{}) {
+	fmt.Fprintf(os.Stderr, format, args...)
+	fmt.Fprintln(os.Stderr)
+	
+	instruction := vm.Ip - 1
+	line := vm.Chunk.GetLine(instruction)
+	fmt.Fprintf(os.Stderr, "[line %d] in script\n", line)
+	
+	vm.resetStack()
 }
