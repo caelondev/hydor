@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"math"
 	"os"
 
 	"github.com/caelondev/hydor/frontend/bytecode"
@@ -129,6 +130,22 @@ func (vm *VM) run() result.InterpretResult {
 				return result.INTERPRET_RUNTIME_ERROR
 			}
 			vm.push(value.NumberVal(a.AsNumber() / b.AsNumber()))
+
+		case bytecode.OP_MODULO:
+			b := vm.pop()
+			a := vm.pop()
+			if !a.IsNumber() || !b.IsNumber() {
+				vm.runtimeError("Cannot divide %s (%s) by %s (%s). Both operands must be numbers.",
+					value.ValueTypeName(a), formatValue(a),
+					value.ValueTypeName(b), formatValue(b))
+				return result.INTERPRET_RUNTIME_ERROR
+			}
+
+			if b.AsNumber() == 0 {
+				vm.runtimeError("Cannot modulo %g by zero. Division by zero is undefined.", a.AsNumber())
+				return result.INTERPRET_RUNTIME_ERROR
+			}
+		 vm.push(value.NumberVal(math.Mod(a.AsNumber(), b.AsNumber())))
 
 		case bytecode.OP_EQUAL:
 			b := vm.pop()

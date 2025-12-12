@@ -50,6 +50,7 @@ func init() {
 		tokens.TOKEN_SEMICOLON:     {nil, nil, PREC_NONE},
 		tokens.TOKEN_SLASH:         {nil, parseBinary, PREC_FACTOR},
 		tokens.TOKEN_STAR:          {nil, parseBinary, PREC_FACTOR},
+	  tokens.TOKEN_PERCENT:       {nil, parseBinary, PREC_FACTOR},
 		tokens.TOKEN_BANG:          {parseUnary, nil, PREC_NONE},
 		tokens.TOKEN_BANG_EQUAL:    {nil, parseBinary, PREC_EQUALITY},
 		tokens.TOKEN_EQUAL:         {nil, nil, PREC_NONE},
@@ -237,6 +238,8 @@ func parseBinary(p *Parser) {
 		p.emitByte(byte(bytecode.OP_MULTIPLY))
 	case tokens.TOKEN_SLASH:
 		p.emitByte(byte(bytecode.OP_DIVIDE))
+	case tokens.TOKEN_PERCENT:
+		p.emitByte(byte(bytecode.OP_MODULO))
 
 	// !(a == b)
 	case tokens.TOKEN_BANG_EQUAL:

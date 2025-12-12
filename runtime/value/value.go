@@ -42,6 +42,12 @@ type ValueArray struct {
 	Values []Value
 }
 
+func NewValueArray() *ValueArray {
+	return &ValueArray{
+		Values: make([]Value, 0),
+	}
+}
+
 func NumberVal(n float64) Value {
 	return Value{Type: VAL_NUMBER, Number: n}
 }
@@ -89,12 +95,6 @@ func NewString(chars string) *ObjString {
 
 func (s *ObjString) AsObj() *Obj {
 	return &s.Object
-}
-
-func NewValueArray() *ValueArray {
-	return &ValueArray{
-		Values: make([]Value, 0),
-	}
 }
 
 func (va *ValueArray) Write(value Value) {

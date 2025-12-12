@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/caelondev/hydor/frontend/bytecode"
 	"github.com/caelondev/hydor/frontend/lexer"
@@ -74,10 +73,6 @@ func run(source string) result.InterpretResult {
 		return result.INTERPRET_COMPILE_ERROR
 	}
 
-	start := time.Now()
 	result := vm.Interpret(bytecode)
-	duration := time.Since(start)
-
-	fmt.Printf("The VM took %s execution time\n", duration)
 	return result
 }

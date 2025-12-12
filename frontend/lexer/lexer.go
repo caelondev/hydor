@@ -52,6 +52,7 @@ func (s *Tokenizer) ScanToken() tokens.Token {
 	case '+': return s.newToken(tokens.TOKEN_PLUS)
 	case '/': return s.newToken(tokens.TOKEN_SLASH)
 	case '*': return s.newToken(tokens.TOKEN_STAR)
+	case '%': return s.newToken(tokens.TOKEN_PERCENT)
 	case '!': return s.matchEqual(tokens.TOKEN_BANG, tokens.TOKEN_BANG_EQUAL)
 	case '<': return s.matchEqual(tokens.TOKEN_LESS, tokens.TOKEN_LESS_EQUAL)
 	case '>': return s.matchEqual(tokens.TOKEN_GREATER, tokens.TOKEN_GREATER_EQUAL)
