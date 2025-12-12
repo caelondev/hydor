@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"time"
 )
 
 func main() {
@@ -19,7 +20,6 @@ func main() {
 
 func runRepl() {
 	scanner := bufio.NewScanner(os.Stdin)
-	vm := NewVM()
 
 	fmt.Println("Hydor REPL - Type '/exit' to quit")
 
@@ -37,7 +37,7 @@ func runRepl() {
 			break
 		}
 
-		vm.Interpret(line)
+		run(line)
 	}
 }
 
@@ -47,8 +47,7 @@ func runFile(path string) {
 		fmt.Fprintf(os.Stderr, "Cannot open file '%s', Error: %s", path,  err.Error())
 	}
 
-	vm := NewVM()
-	result := vm.Interpret(string(source))
+	result := run(string(source))
 
 	if result == INTERPRET_COMPILE_ERROR {
 		os.Exit(65)
@@ -57,4 +56,21 @@ func runFile(path string) {
 	if result == INTERPRET_RUNTIME_ERROR {
 		os.Exit(64)
 	}
+}
+
+func run(source string) InterpretResult {
+	chunk := NewChunk(source)
+	parser := NewParser()
+	vm := NewVM()
+	
+	if !parser.Compile(source, chunk) {
+		return INTERPRET_COMPILE_ERROR
+	}
+
+	start := time.Now()
+	result := vm.Interpret(chunk)
+	duration := time.Since(start)
+
+	fmt.Printf("The VM took %s execution time\n", duration)
+	return result
 }
