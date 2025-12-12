@@ -1,20 +1,20 @@
-package main
+package lexer
 
 import (
 	"fmt"
 
-	"github.com/caelondev/hydor/tokens"
+	"github.com/caelondev/hydor/frontend/tokens"
 )
 
-type Scanner struct {
+type Tokenizer struct {
 	Source  string
 	Start   int
 	Current int
 	Line    int
 }
 
-func NewScanner(source string) *Scanner {
-	return &Scanner{
+func NewTokenizer(source string) *Tokenizer {
+	return &Tokenizer{
 		Source:  source,
 		Start:   0,
 		Current: 0,
@@ -22,7 +22,7 @@ func NewScanner(source string) *Scanner {
 	}
 }
 
-func (s *Scanner) ScanToken() tokens.Token {
+func (s *Tokenizer) ScanToken() tokens.Token {
 	s.skipIgnored()
 	s.Start = s.Current
 
@@ -65,7 +65,7 @@ func (s *Scanner) ScanToken() tokens.Token {
 	return s.errorToken(fmt.Sprintf("Unknown character found '%c'", c))
 }
 
-func (s *Scanner) multilineString(terminator byte) tokens.Token {
+func (s *Tokenizer) multilineString(terminator byte) tokens.Token {
 	startLine := s.Line
 	for s.peek() != terminator && !s.isAtEnd() {
 		if s.peek() == '\n' { s.Line++ }
@@ -86,7 +86,7 @@ func (s *Scanner) multilineString(terminator byte) tokens.Token {
 	}
 }
 
-func (s *Scanner) identifier() tokens.Token {
+func (s *Tokenizer) identifier() tokens.Token {
 	for isAlphanumeric(s.peek()) { s.advance() }
 	lexeme := s.Source[s.Start:s.Current]
 	if kw, ok := tokens.RESERVED_KEYWORDS[lexeme]; ok {
@@ -96,7 +96,7 @@ func (s *Scanner) identifier() tokens.Token {
 	return s.newToken(tokens.TOKEN_IDENTIFIER)
 }
 
-func (s *Scanner) number() tokens.Token {
+func (s *Tokenizer) number() tokens.Token {
 	for isDigit(s.peek()) { s.advance() }
 	if s.peek() == '.' && isDigit(s.peekNext()) {
 		s.advance()
@@ -108,7 +108,7 @@ func (s *Scanner) number() tokens.Token {
 	return s.newToken(tokens.TOKEN_NUMBER)
 }
 
-func (s *Scanner) string(terminator byte) tokens.Token {
+func (s *Tokenizer) string(terminator byte) tokens.Token {
 	for s.peek() != terminator && s.peek() != '\n' && !s.isAtEnd() { s.advance() }
 	if s.isAtEnd() || s.peek() == '\n' {
 		return s.errorToken("Unterminated non-multiline string")
@@ -119,7 +119,7 @@ func (s *Scanner) string(terminator byte) tokens.Token {
 	return s.newTokenLexeme(tokens.TOKEN_STRING, lexeme)
 }
 
-func (s *Scanner) skipIgnored() {
+func (s *Tokenizer) skipIgnored() {
 	for {
 		c := s.peek()
 		switch c {
@@ -147,7 +147,7 @@ func (s *Scanner) skipIgnored() {
 	}
 }
 
-func (s *Scanner) peek() byte {
+func (s *Tokenizer) peek() byte {
 	if s.isAtEnd() {
 		return 0
 	}
@@ -155,7 +155,7 @@ func (s *Scanner) peek() byte {
 	return s.Source[s.Current]
 }
 
-func (s *Scanner) peekNext() byte {
+func (s *Tokenizer) peekNext() byte {
 	if s.Current+1 >= len(s.Source) {
 		return 0
 	}
@@ -163,12 +163,12 @@ func (s *Scanner) peekNext() byte {
 	return s.Source[s.Current+1]
 }
 
-func (s *Scanner) advance() byte {
+func (s *Tokenizer) advance() byte {
 	s.Current++
 	return s.Source[s.Current-1]
 }
 
-func (s *Scanner) match(expected byte) bool {
+func (s *Tokenizer) match(expected byte) bool {
 	if s.isAtEnd() || s.Source[s.Current] != expected {
 		return false
 	}
@@ -177,7 +177,7 @@ func (s *Scanner) match(expected byte) bool {
 	return true
 }
 
-func (s *Scanner) matchEqual(single, eq tokens.TokenType) tokens.Token {
+func (s *Tokenizer) matchEqual(single, eq tokens.TokenType) tokens.Token {
 	if s.match('=') {
 		return s.newToken(eq)
 	}
@@ -185,11 +185,11 @@ func (s *Scanner) matchEqual(single, eq tokens.TokenType) tokens.Token {
 	return s.newToken(single)
 }
 
-func (s *Scanner) newToken(tt tokens.TokenType) tokens.Token {
+func (s *Tokenizer) newToken(tt tokens.TokenType) tokens.Token {
 	return s.newTokenLexeme(tt, s.Source[s.Start:s.Current])
 }
 
-func (s *Scanner) newTokenLexeme(tt tokens.TokenType, lexeme string) tokens.Token {
+func (s *Tokenizer) newTokenLexeme(tt tokens.TokenType, lexeme string) tokens.Token {
 	return tokens.Token{
 		Type: tt,
 		Line: s.Line,
@@ -199,11 +199,11 @@ func (s *Scanner) newTokenLexeme(tt tokens.TokenType, lexeme string) tokens.Toke
 	}
 }
 
-func (s *Scanner) errorToken(msg string) tokens.Token {
+func (s *Tokenizer) errorToken(msg string) tokens.Token {
 	return s.newTokenLexeme(tokens.TOKEN_ERROR, msg)
 }
 
-func (s *Scanner) isAtEnd() bool {
+func (s *Tokenizer) isAtEnd() bool {
 	return s.Current >= len(s.Source)
 }
 

@@ -5,6 +5,12 @@ import (
 	"fmt"
 	"os"
 	"time"
+
+	"github.com/caelondev/hydor/frontend/bytecode"
+	"github.com/caelondev/hydor/frontend/lexer"
+	"github.com/caelondev/hydor/frontend/parser"
+	"github.com/caelondev/hydor/result"
+	"github.com/caelondev/hydor/runtime/vm"
 )
 
 func main() {
@@ -47,28 +53,29 @@ func runFile(path string) {
 		fmt.Fprintf(os.Stderr, "Cannot open file '%s', Error: %s", path,  err.Error())
 	}
 
-	result := run(string(source))
+	returnValue := run(string(source))
 
-	if result == INTERPRET_COMPILE_ERROR {
+	if returnValue == result.INTERPRET_COMPILE_ERROR {
 		os.Exit(65)
 	}
 
-	if result == INTERPRET_RUNTIME_ERROR {
+	if returnValue == result.INTERPRET_RUNTIME_ERROR {
 		os.Exit(64)
 	}
 }
 
-func run(source string) InterpretResult {
-	chunk := NewChunk(source)
-	parser := NewParser()
-	vm := NewVM()
+func run(source string) result.InterpretResult {
+	tokenizer := lexer.NewTokenizer(source)
+	bytecode := bytecode.NewBytecode(source)
+	parser := parser.NewParser()
+	vm := vm.NewVM()
 	
-	if !parser.Compile(source, chunk) {
-		return INTERPRET_COMPILE_ERROR
+	if !parser.Compile(source, tokenizer, bytecode) {
+		return result.INTERPRET_COMPILE_ERROR
 	}
 
 	start := time.Now()
-	result := vm.Interpret(chunk)
+	result := vm.Interpret(bytecode)
 	duration := time.Since(start)
 
 	fmt.Printf("The VM took %s execution time\n", duration)

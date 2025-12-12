@@ -1,10 +1,13 @@
-package main
+package parser
 
 import (
 	"fmt"
 	"strconv"
 
-	"github.com/caelondev/hydor/tokens"
+	"github.com/caelondev/hydor/frontend/bytecode"
+	"github.com/caelondev/hydor/frontend/lexer"
+	"github.com/caelondev/hydor/frontend/tokens"
+	"github.com/caelondev/hydor/runtime/value"
 )
 
 const UINT8_MAX = 255
@@ -80,18 +83,18 @@ func init() {
 }
 
 type Parser struct {
-	scanner             *Scanner
+	lexer               *lexer.Tokenizer
 	current, previous   tokens.Token
 	hadError, panicMode bool
-	compilingChunk      *Chunk
+	compilingChunk      *bytecode.Bytecode
 }
 
 func NewParser() *Parser {
 	return &Parser{}
 }
 
-func (p *Parser) Compile(source string, chunk *Chunk) bool {
-	p.scanner = NewScanner(source)
+func (p *Parser) Compile(source string, lexer *lexer.Tokenizer, chunk *bytecode.Bytecode) bool {
+	p.lexer = lexer
 	p.compilingChunk = chunk
 	p.hadError = false
 	p.panicMode = false
@@ -107,7 +110,7 @@ func (p *Parser) Compile(source string, chunk *Chunk) bool {
 func (p *Parser) advance() {
 	p.previous = p.current
 	for {
-		p.current = p.scanner.ScanToken()
+		p.current = p.lexer.ScanToken()
 		if p.current.Type != tokens.TOKEN_ERROR {
 			break
 		}
@@ -167,23 +170,24 @@ func (p *Parser) parsePrecedence(precedence Precedence) {
 	}
 }
 
-func (p *Parser) emitByte(b byte)       {
+func (p *Parser) emitByte(b byte) {
 	p.compilingChunk.Write(b, p.previous.Line)
 }
 
-func (p *Parser) emitBytes(b1, b2 byte) { 
-	p.emitByte(b1); p.emitByte(b2) 
+func (p *Parser) emitBytes(b1, b2 byte) {
+	p.emitByte(b1)
+	p.emitByte(b2)
 }
 
-func (p *Parser) emitReturn() { 
-	p.emitByte(byte(OP_RETURN)) 
+func (p *Parser) emitReturn() {
+	p.emitByte(byte(bytecode.OP_RETURN))
 }
 
-func (p *Parser) emitConstant(v Value) { 
-	p.emitBytes(byte(OP_CONSTANT), p.makeConstant(v))
+func (p *Parser) emitConstant(v value.Value) {
+	p.emitBytes(byte(bytecode.OP_CONSTANT), p.makeConstant(v))
 }
 
-func (p *Parser) makeConstant(v Value) byte {
+func (p *Parser) makeConstant(v value.Value) byte {
 	idx := p.compilingChunk.AddConstant(v)
 	if idx > UINT8_MAX {
 		p.error("Too many constants")
@@ -199,13 +203,13 @@ func (p *Parser) endCompiler() {
 // ---- Parse functions ----
 
 func parseString(p *Parser) {
-	str := NewString(p.previous.Lexeme)
-	p.emitConstant(ObjVal(str.AsObj()))
+	str := value.NewString(p.previous.Lexeme)
+	p.emitConstant(value.ObjVal(str.AsObj()))
 }
 
 func parseNumber(p *Parser) {
 	val, _ := strconv.ParseFloat(p.previous.Lexeme, 64)
-	p.emitConstant(NumberVal(val))
+	p.emitConstant(value.NumberVal(val))
 }
 
 func parseUnary(p *Parser) {
@@ -213,45 +217,53 @@ func parseUnary(p *Parser) {
 	p.parsePrecedence(PREC_parseUnary)
 
 	switch op {
-	case tokens.TOKEN_MINUS: p.emitByte(byte(OP_NEGATE))
-	case tokens.TOKEN_BANG: p.emitByte(byte(OP_NOT))
+	case tokens.TOKEN_MINUS:
+		p.emitByte(byte(bytecode.OP_NEGATE))
+	case tokens.TOKEN_BANG:
+		p.emitByte(byte(bytecode.OP_NOT))
 	}
 }
 
 func parseBinary(p *Parser) {
 	op := p.previous.Type
 	rule := parseRules[op]
-	p.parsePrecedence(rule.precedence +1)
+	p.parsePrecedence(rule.precedence + 1)
 	switch op {
 	case tokens.TOKEN_PLUS:
-		p.emitByte(byte(OP_ADD))
+		p.emitByte(byte(bytecode.OP_ADD))
 	case tokens.TOKEN_MINUS:
-		p.emitByte(byte(OP_SUBTRACT))
+		p.emitByte(byte(bytecode.OP_SUBTRACT))
 	case tokens.TOKEN_STAR:
-		p.emitByte(byte(OP_MULTIPLY))
+		p.emitByte(byte(bytecode.OP_MULTIPLY))
 	case tokens.TOKEN_SLASH:
-		p.emitByte(byte(OP_DIVIDE))
+		p.emitByte(byte(bytecode.OP_DIVIDE))
 
 	// !(a == b)
-	case tokens.TOKEN_BANG_EQUAL: p.emitBytes(byte(OP_EQUAL), byte(OP_NOT))
-	case tokens.TOKEN_EQUAL_EQUAL: p.emitByte(byte(OP_EQUAL))
-	case tokens.TOKEN_GREATER: p.emitByte(byte(OP_GREATER))
+	case tokens.TOKEN_BANG_EQUAL:
+		p.emitBytes(byte(bytecode.OP_EQUAL), byte(bytecode.OP_NOT))
+	case tokens.TOKEN_EQUAL_EQUAL:
+		p.emitByte(byte(bytecode.OP_EQUAL))
+	case tokens.TOKEN_GREATER:
+		p.emitByte(byte(bytecode.OP_GREATER))
 	// !(a < b)
-	case tokens.TOKEN_GREATER_EQUAL: p.emitBytes(byte(OP_LESS), byte(OP_NOT))
-	case tokens.TOKEN_LESS: p.emitByte(byte(OP_LESS))
+	case tokens.TOKEN_GREATER_EQUAL:
+		p.emitBytes(byte(bytecode.OP_LESS), byte(bytecode.OP_NOT))
+	case tokens.TOKEN_LESS:
+		p.emitByte(byte(bytecode.OP_LESS))
 	// !(a > b)
-	case tokens.TOKEN_LESS_EQUAL: p.emitBytes(byte(OP_GREATER), byte(OP_NOT))
+	case tokens.TOKEN_LESS_EQUAL:
+		p.emitBytes(byte(bytecode.OP_GREATER), byte(bytecode.OP_NOT))
 	}
 }
 
 func parseLiteral(p *Parser) {
 	switch p.previous.Type {
 	case tokens.TOKEN_FALSE:
-		p.emitByte(byte(OP_FALSE))
+		p.emitByte(byte(bytecode.OP_FALSE))
 	case tokens.TOKEN_TRUE:
-		p.emitByte(byte(OP_TRUE))
+		p.emitByte(byte(bytecode.OP_TRUE))
 	case tokens.TOKEN_NIL:
-		p.emitByte(byte(OP_NIL))
+		p.emitByte(byte(bytecode.OP_NIL))
 	}
 }
 

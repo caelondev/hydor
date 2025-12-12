@@ -1,4 +1,6 @@
-package main
+package bytecode
+
+import "github.com/caelondev/hydor/runtime/value"
 
 type OpCode byte
 const (
@@ -18,28 +20,28 @@ const (
 	OP_RETURN
 )
 
-type Chunk struct {
+type Bytecode struct {
 	Code      []byte
 	Lines     []LineRun
-	Constants ValueArray
+	Constants value.ValueArray
 }
 
 type LineRun struct { Line, Count int }
 
-func NewChunk(src string) *Chunk {
-	return &Chunk{
+func NewBytecode(src string) *Bytecode {
+	return &Bytecode{
 		Code:      make([]byte, 0, len(src)+16),
 		Lines:     make([]LineRun, 0, len(src)/4),
-		Constants: *NewValueArray(),
+		Constants: *value.NewValueArray(),
 	}
 }
 
-func (c *Chunk) AddConstant(v Value) int {
+func (c *Bytecode) AddConstant(v value.Value) int {
 	c.Constants.Write(v)
 	return len(c.Constants.Values) - 1
 }
 
-func (c *Chunk) Write(b byte, line int) {
+func (c *Bytecode) Write(b byte, line int) {
 	c.Code = append(c.Code, b)
 	if len(c.Lines) > 0 && c.Lines[len(c.Lines)-1].Line == line {
 		c.Lines[len(c.Lines)-1].Count++

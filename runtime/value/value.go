@@ -1,4 +1,4 @@
-package main
+package value
 
 import (
 	"fmt"
@@ -101,7 +101,7 @@ func (va *ValueArray) Write(value Value) {
 	va.Values = append(va.Values, value)
 }
 
-func printValue(value Value) {
+func PrintValue(value Value) {
 	switch value.Type {
 	case VAL_BOOL:
 		if value.Bool {
@@ -114,18 +114,18 @@ func printValue(value Value) {
 	case VAL_NUMBER:
 		fmt.Printf("%g", value.Number)
 	case VAL_OBJ:
-		printObject(value)
+		PrintObject(value)
 	}
 }
 
-func printObject(value Value) {
+func PrintObject(value Value) {
 	switch value.AsObj().Type {
 	case OBJ_STRING:
 		fmt.Print(value.AsCString())
 	}
 }
 
-func valuesEqual(a, b Value) bool {
+func ValuesEqual(a, b Value) bool {
 	if a.Type != b.Type {
 		return false
 	}
@@ -138,13 +138,13 @@ func valuesEqual(a, b Value) bool {
 	case VAL_NUMBER:
 		return a.Number == b.Number
 	case VAL_OBJ:
-		return objectsEqual(a, b)
+		return ObjectsEqual(a, b)
 	default:
 		return false
 	}
 }
 
-func objectsEqual(a, b Value) bool {
+func ObjectsEqual(a, b Value) bool {
 	if a.AsObj().Type != b.AsObj().Type {
 		return false
 	}
@@ -157,7 +157,7 @@ func objectsEqual(a, b Value) bool {
 	}
 }
 
-func valueTypeName(v Value) string {
+func ValueTypeName(v Value) string {
 	switch v.Type {
 	case VAL_BOOL:
 		return "boolean"
